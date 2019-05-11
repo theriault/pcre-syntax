@@ -2,6 +2,7 @@
 <html>
 <head>
 	<meta charset="utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 	<link rel="stylesheet" href="railroad-diagrams/railroad-diagrams.css"/>
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 	<script src="railroad-diagrams/railroad-diagrams.js"></script>
@@ -95,7 +96,7 @@
 		
 		<p>The overall syntax of PCRE is the following:</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 			ComplexDiagram(
 				Choice(0,
 					Skip(),
@@ -112,7 +113,7 @@
 			branches match. If none of the branches match, the pattern fails. An empty branch will automatically match.
 		</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 			ComplexDiagram(
 				OneOrMore(
 					Sequence(NonTerminal('branch', {href: '#branch'})),
@@ -128,7 +129,7 @@
 			characters match themselves.
 		</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 			ComplexDiagram(
 				Choice(1,
 					Comment('empty branches automatically match'),
@@ -180,7 +181,7 @@
 
 		<h4 id="character">literal character (nonmetacharacter)</h4>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 				NonTerminal('literal character')
 		).addTo()
@@ -211,7 +212,7 @@
 
 		<h4 id="wildcard">wildcard <code>.</code></h4>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			  '.'
 		).addTo()
@@ -240,7 +241,7 @@
 			the character class to change how many characters it matches.
 		</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 		ComplexDiagram(
 			Terminal('['),
 			Choice(0,
@@ -278,7 +279,7 @@
 		
 		<p>A POSIX character class may appear within a <a href="#character-class">character class</a>.</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 		Start('simple', 'test'),
 		'[:',
@@ -359,7 +360,7 @@
 			<a href="#quantifier">quantifier</a> may come after it depending on the escape sequence.
 		</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 		ComplexDiagram(
 		Choice(0, 
 			NonTerminal('\\ assertion', {href: "#escape-assertion"}),
@@ -383,7 +384,7 @@
 			sequence cannot appear within a <a href="#character-class">character class</a>.
 		</p>
 	
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 		Choice(0,
 			Sequence('\\b', Comment('assert word boundary ------------------------------')),
@@ -414,7 +415,7 @@
 			it to modify how many it must match.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 		Choice(0,
 			Sequence('\\a', Comment('alarm BEL character (same as \\x07)-------------------------')),
@@ -491,7 +492,7 @@
 			come after a character type escape sequence to modify how many it must match.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Choice(0,
 				Sequence('\\C', Comment('match a single data unit ----------------------------------')),
@@ -540,7 +541,7 @@
 			property. 
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Comment('{'),
 			Choice(0,
@@ -639,7 +640,7 @@
 			match.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Choice(0,
 				Sequence(
@@ -703,7 +704,7 @@
 			<a href="#quanitifer">quantifier</a> may come after a subroutine call to modify how many it must match.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Terminal('\\g'),
 			Choice(0,
@@ -779,7 +780,7 @@
 			after a <code>\Q \E</code> sequence does not entirely work.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Choice(0,
 				Sequence(
@@ -870,7 +871,7 @@
 			or the <a href="#wildcard">dot wildcard</a>.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Choice(0,
 				Sequence(
@@ -979,7 +980,7 @@
 			comment or backtracking control.
 		</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 		ComplexDiagram(
 			Terminal('('),
 			Choice(0,
@@ -1113,7 +1114,7 @@
 			<a href="#condition">conditional branching subexpression</a>.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Sequence(
 				Choice(0,
@@ -1145,7 +1146,7 @@
 			<a href="#subexpression">subexpression</a>.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Terminal('('),
 			Choice(0,
@@ -1210,7 +1211,7 @@
 			would change to case-insensitive for the ABC pattern within the subexpression)
 		</p>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 		ComplexDiagram(
 			Choice(0,
 				OptionalSequence(
@@ -1245,7 +1246,7 @@
 		
 		<h6 id="option">options</h6>
 		
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Choice(0,
 				Sequence('i', Comment('PCRE_CASELESS', {href: "#PCRE_CASELESS"})),
@@ -1315,7 +1316,7 @@
 			</a>
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			Comment('(*'),
 			Choice(0,
@@ -1385,7 +1386,7 @@
 			able to change the program that processes the patterns.
 		</p>
 
-		<p><script>
+		<p class="table-responsive"><script>
 		Diagram(
 			OneOrMore(
 				Sequence(
