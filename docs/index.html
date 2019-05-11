@@ -1,0 +1,1479 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf8">
+	<link rel="stylesheet" href="railroad-diagrams.css"/>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<script src="railroad-diagrams.js"></script>
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+	<style>
+	.railroad-diagram .non-terminal text {font-style: italic;}
+	</style>
+</head>
+<body>
+
+	<section class="container">
+
+		<h1>PCRE: Perl Compatible Regular Expressions</h1>
+
+		<p>
+			This document uses syntax diagrams to visually explain
+			<a href="https://www.pcre.org/original/doc/html/pcresyntax.html">PCRE syntax</a>.
+			PCRE is available as an extension for
+			<a href="http://httpd.apache.org/docs/2.4/install.html">Apache</a>,
+			<a href="http://nginx.org/en/docs/configure.html">NGINX</a>,
+			<a href="https://www.php.net/manual/en/book.pcre.php">PHP</a>,			
+			<a href="https://pypi.org/project/python-pcre/">Python</a>,
+			<a href="https://godoc.org/github.com/glenn-brown/golang-pkg-pcre/src/pkg/pcre">Go</a>,
+			and others.
+		</p>
+
+		<ol>
+			<li>
+				<a href="#regular-expression">regular expression</a>
+				<ol>
+					<li>
+						<a href="#pattern">pattern</a>
+						<ol>
+							<li>
+								<a href="#branch">branch <code>|</code></a>
+								<ol>
+									<li><a href="#character">literal character</a></li>
+									<li><a href="#wildcard">wildcard <code>.</code></a></li>
+									<li>
+										<a href="#character-class">character class <code>[ ]</code></a>
+										<ul>
+											<li><a href="#posix-character-class">POSIX character class</a></li>
+										</ul>
+									</li>
+									<li>
+										<a href="#escape-sequence">escape sequence <code>\</code></a>
+										<ol>
+											<li><a href="#escape-assertion">assertion</a></li>
+											<li><a href="#escape-character">non-printing character</a></li>
+											<li>
+												<a href="#escape-type">character type</a>
+												<ul>
+													<li><a href="#unicode-properties">Unicode properties for <code>\p</code> and <code>\P</code></a></li>
+													<li><a href="#unicode-scripts">Unicode scripts for <code>\p</code> and <code>\P</code></a></li>
+												</ul>
+											</li>
+											<li><a href="#escape-backreference">backreference</a></li>
+											<li><a href="#escape-subroutine">subroutine call</a></li>
+											<li><a href="#escape-reset">reset match start</a></li>
+											<li><a href="#escape-quote">character quoting</a></li>
+											<li><a href="#escape-unsupported">unsupported escape sequence</a></li>
+											<li><a href="#escape-unrecognized">unrecognized escape sequence</a></li>
+										</ol>	
+									</li>
+									<li><a href="#quantifier">quantifier  <code>{ } ? * +</code></a></li>
+									<li><a href="#start-anchor">start anchor <code>^</code></a></li>
+									<li><a href="#end-anchor">end anchor <code>$</code></a></li>
+									<li><a href="#subexpression">subexpression  <code>( )</code></a></li>
+									<ul>
+										<li><a href="#assertion">assertion</a></li>
+										<li><a href="#condition">condition</a></li>
+										<li>
+											<a href="#internal-option">internal option setting</a>
+											<ul>
+												<li><a href="#option">options</a></li>
+											</ul>
+										</li>
+										<li><a href="#control-verb">control verb</a></li>
+									</ul>
+								</ol>
+							</li>
+						</ol>
+					</li>
+					<li><a href="#start-of-pattern-options">special options</a></li>
+					<li><a href="#newline-sequence">newline sequence</a></li>
+				</ol>
+			</li>
+		</ol>
+
+		<h1 id="regular-expression">regular expression</h1>
+		
+		<p>The overall syntax of PCRE is the following:</p>
+		
+		<p><script>
+			ComplexDiagram(
+				Choice(0,
+					Skip(),
+					NonTerminal('special options', {href: '#start-of-pattern-options'}),
+				),
+				NonTerminal('pattern', {href: '#pattern'}),
+			).addTo()
+		</script></p>
+
+		<h2 id="pattern">pattern</h2>
+		<p>
+			A pattern is one or more branches to try, each separated by a vertical bar. When there's two or more
+			branches, this is known as alternation. Branches are tried from left to right until one of the
+			branches match. If none of the branches match, the pattern fails. An empty branch will automatically match.
+		</p>
+		
+		<p><script>
+			ComplexDiagram(
+				OneOrMore(
+					Sequence(NonTerminal('branch', {href: '#branch'})),
+					Terminal('|'),
+				)
+			).addTo()
+		</script></p>
+
+		<h3 id="branch">branch</h3>
+		<p>
+			A branch contains metacharacters and literal characters (nonmetacharacters) that make up what to match.
+			Metacharacters have special meanings that may involve a sequence of one or more characters. Literal
+			characters match themselves.
+		</p>
+		
+		<p><script>
+			ComplexDiagram(
+				Choice(1,
+					Comment('empty branches automatically match'),
+					OneOrMore(
+						Choice(2,
+							Sequence(
+								Terminal('^', {href: '#start-anchor'}),
+								Comment('start anchor', {href: '#start-anchor'})
+							),
+							Sequence(
+								Terminal('$', {href: '#end-anchor'}),
+								Comment('end anchor', {href: '#end-anchor'})
+							), 
+							Sequence(
+								Choice(0,
+									Sequence(
+										NonTerminal('literal character', {href: '#character'})
+									),	
+									Sequence(
+										Terminal('.', {href: '#wildcard'}),
+										Comment('wildcard', {href: '#wildcard'})
+									),
+									Sequence(
+										NonTerminal('\\ escape sequence', {href: '#escape-sequence'})
+									),
+									Sequence(
+										NonTerminal('[ ] character class', {href: '#character-class'})
+									),
+									Sequence(
+										NonTerminal('( ) subexpression', {href: '#subexpression'})
+									)
+								),
+								Choice(0,
+									Comment('exactly once'),
+									NonTerminal('? * + { } quantifier', {href: '#quantifier'})
+								)
+							),
+						)
+					)
+				)
+			).addTo()
+		</script></p>
+		
+		<div class="alert alert-warning">
+			A quantifier cannot come after a <a href="#subexpression">subexpression</a> that is a comment or an escape
+			sequence that is an <a href="#escape-assertion">assertion</a> or <a href="#escape-reset">reset match
+			start</a>.
+		</div>
+
+		<h4 id="character">literal character (nonmetacharacter)</h4>
+
+		<p><script>
+		Diagram(
+				NonTerminal('literal character')
+		).addTo()
+		</script></p>
+
+		<p>
+			Within a <a href="#branch">branch</a>, any character that is not one of the following metacharacters is
+			treated as a literal character:
+		</p>
+
+		<p><code>( ) [ | * + ? \ . $ ^</code></p>
+
+		<p>
+			Additionally, <code>{</code> is considered a metacharacter if it forms a valid
+			<a href="#quantifier">quantifier</a>, otherwise it is treated as a literal character.
+		</p>
+
+		<p>
+			By default, a literal characer matches a single character.
+			A literal character may be followed by a <a href="#quantifier">quantifier</a> to change this behavior.
+		</p>
+
+		<p>
+			Preceding a metacharacter by a backslash forms an <a href="#escape-sequence">escape sequence</a> that will
+			make a metacharacter match the literal character instead. See <a href="#escape-quote">character
+			quoting</a>.
+		</p>
+
+		<h4 id="wildcard">wildcard <code>.</code></h4>
+
+		<p><script>
+		Diagram(
+			  '.'
+		).addTo()
+		</script></p>
+		
+		<p>
+			Within a <a href="#branch">branch</a>, the dot metacharacter matches any character except if the character
+			is the start of a valid <a href="#newline-sequence">newline sequence</a>. The dot may be followed by a 
+			<a href="#quantifier">quantifier</a> to change how many characters it matches.
+		</p>
+
+		<p>
+			In <a href="#PCRE_DOTALL">dotall</a> mode, the dot matches any character.
+		</p>
+
+		<div class="alert alert-info">
+			<strong>Note:</strong> The <a href="#escape-type">escape sequence <code>\N</code></a> behaves like the
+			dot wildcard with the exception that dotall mode does not affect it; it never matches the start of a valid
+			newline sequence.
+		</div>
+
+		<h4 id="character-class">character class</h4>
+		<p>
+			Within a <a href="#branch">branch</a>, a character class matches a single character within a set of
+			characters. A <a href="#quantifier">quantifier</a> may come immediately after the closing bracket of
+			the character class to change how many characters it matches.
+		</p>
+		
+		<p><script>
+		ComplexDiagram(
+			Terminal('['),
+			Choice(0,
+				Sequence(
+					 Optional(Sequence('^', Comment('negate'))),
+					 OneOrMore(
+						 Choice(0,
+						 	Sequence(
+						 		NonTerminal('character'),
+						 		Optional(Sequence(Comment('range'), '-', NonTerminal('character')))
+						 	),
+						 	Sequence(NonTerminal('\\ escape sequence', {href: '#escape-sequence'})),
+							Sequence(NonTerminal('POSIX character class', {href: '#posix-character-class'}))
+						)
+					)
+				),
+				Sequence(Comment('POSIX start of word boundary assertion'), Sequence('[:<:]')),
+				Sequence(Comment('POSIX end of word boundary assertion'), Sequence('[:>:]'))
+			),
+			Terminal(']')
+		).addTo()
+		</script></p>
+					
+		<div class="alert alert-info">
+			<strong>escape sequence</strong>: valid <a href="#escape-sequence">escape sequences</a> include
+			<a href="#escape-character">non-printing characters</a> (<code>\a\b\c\e\f\n\o\r\t\x</code>),
+			<a href="#escape-type">character types</a> (<code>\d\D\h\H\p\P\s\S\v\V\w\W</code> but not
+			<code>\C\N\R\X</code>), 
+			and <a href="#escape-quote">character quoting</a>.
+			<code>\b</code> is treated as a backspace
+			character within a character class (same as <code>\x08</code>).
+		</div>
+		
+		<h5 id="posix-character-class">POSIX character class</h5>
+		
+		<p>A POSIX character class may appear within a <a href="#character-class">character class</a>.</p>
+		
+		<p><script>
+		Diagram(
+		Start('simple', 'test'),
+		'[:',
+		Optional(
+			Sequence('^', Comment('negate'))
+		),
+		Choice(0,
+			Terminal('alnum', {href: '#posix-alnum'}),
+			Terminal('alpha', {href: '#posix-alpha'}),
+			Terminal('ascii', {href: '#posix-ascii'}),
+			Terminal('blank', {href: '#posix-blank'}),
+			Terminal('cntrl', {href: '#posix-cntrl'}),
+			Terminal('digit', {href: '#posix-digit'}),
+			Terminal('graph', {href: '#posix-graph'}),
+			Terminal('lower', {href: '#posix-lower'}),
+			Terminal('print', {href: '#posix-print'}),
+			Terminal('punct', {href: '#posix-punct'}),
+			Terminal('space', {href: '#posix-space'}),
+			Terminal('upper', {href: '#posix-upper'}),
+			Terminal('word', {href: '#posix-word'}),
+			Terminal('xdigit', {href: '#posix-xdigit'})
+		),
+		':]'
+		).addTo()
+		</script></p>
+
+		<dl>
+		
+			<dt id="posix-alnum">alnum</dt>
+			<dd>same as <code>[:alpha:][:digit:]</code></dd>
+		
+			<dt id="posix-alpha">alpha</dt>
+			<dd>letters</dd>
+		
+			<dt id="posix-ascii">ascii</dt>
+			<dd>ASCII codepoints 0 through 127</dd>
+		
+			<dt id="posix-blank">blank</dt>
+			<dd>space or tab only</dd>
+		
+			<dt id="posix-cntrl">cntrl</dt>
+			<dd>control characters</dd>
+		
+			<dt id="posix-digit">digit</dt>
+			<dd>decimal digits (same as <code>\d</code>)</dd>
+		
+			<dt id="posix-graph">graph</dt>
+			<dd>same as <code>[:alnum:][:space:]</code></dd>
+		
+			<dt id="posix-lower">lower</dt>
+			<dd>lowercase letters</dd>
+		
+			<dt id="posix-print">print</dt>
+			<dd>same as <code>[:graph:][:space:]</code>, except not any controls</dd>
+		
+			<dt id="posix-punct">punct</dt>
+			<dd>printing characters, excluding letters, digits, and space</dd>
+		
+			<dt id="posix-space">space</dt>
+			<dd>whitespace (same as <code>\s</code> since v8.34)</dd>
+		
+			<dt id="posix-upper">upper</dt>
+			<dd>uppercase letters</dd>
+		
+			<dt id="posix-word">word</dt>
+			<dd>"word" characters (same as <code>\w</code>)</dd>
+		
+			<dt id="posix-xdigit">xdigit</dt>
+			<dd>hexadecimal digit, same as <code>[0-9A-Fa-f]</code></dd>
+		
+		</dl>
+
+		<h4 id="escape-sequence">escape sequence</h4>
+
+		<p>
+			An escape sequence may appear within a <a href="#branch">branch</a>. Additionally, they may appear within a
+			<a href="#character-class">character class</a> depending on the escape sequence. A 
+			<a href="#quantifier">quantifier</a> may come after it depending on the escape sequence.
+		</p>
+		
+		<p><script>
+		ComplexDiagram(
+		Choice(0, 
+			NonTerminal('\\ assertion', {href: "#escape-assertion"}),
+			NonTerminal('\\ non-printing character', {href: "#escape-character"}),
+			NonTerminal('\\ character type', {href: "#escape-type"}),
+			NonTerminal('\\ backreference', {href: "#escape-backreference"}),
+			NonTerminal('\\ subroutine call', {href: "#escape-subroutine"}),
+			NonTerminal('\\ reset match start', {href: "#escape-reset"}),
+			NonTerminal('\\ character quoting', {href: "#escape-quote"}),
+			NonTerminal('\\ unsupported escape sequence', {href: "#escape-unsupported"}),
+			NonTerminal('\\ unrecognized escape sequence', {href: "#escape-unrecognized"}),
+		)
+		).addTo();
+		</script></p>
+
+		<h5 id="escape-assertion">escape sequence: assertion/anchor</h5>
+
+		<p>
+			An escaped assertion sequence may appear within a <a href="#branch">branch</a>. A
+			<a href="#quantifier">quantifier</a> cannot come after an escaped assertion sequence. An escaped assertion
+			sequence cannot appear within a <a href="#character-class">character class</a>.
+		</p>
+	
+		<p><script>
+		Diagram(
+		Choice(0,
+			Sequence('\\b', Comment('assert word boundary ------------------------------')),
+			Sequence('\\B', Comment('assert non-word boundary --------------------------')),
+			Sequence('\\A', Comment('assert start of subject ---------------------------')),
+			Sequence('\\z', Comment('assert end of subject -----------------------------')),
+			Sequence('\\Z', Comment('assert end of subject or newline sequence at end --')),
+			Sequence('\\G', Comment('assert first matching position in subject ---------'))
+		)
+		).addTo();
+		</script></p>
+
+		<div class="alert alert-info">
+			<strong>Unicode note:</strong> In Unicode mode, the behavior of <code>\b\B</code> extend to include Unicode
+			characters as well.
+		</div>
+
+		<div class="alert alert-info">
+			See <a href="#start-anchor">start anchor</a> and <a href="#end-anchor">end anchor</a> for other simple
+			assertions.
+		</div>
+		
+		<h5 id="escape-character">escape sequence: non-printing character</h5>
+
+		<p>
+			A non-printing character escape sequence may appear within a <a href="#branch">branch</a> or
+			<a href="#character-class">character class</a>. A <a href="#quantifier">quantifier</a> may come after 
+			it to modify how many it must match.
+		</p>
+
+		<p><script>
+		Diagram(
+		Choice(0,
+			Sequence('\\a', Comment('alarm BEL character (same as \\x07)-------------------------')),
+			Sequence('\\b', Comment('backspace character (only valid within character class) ---')),
+			Sequence('\\c', NonTerminal('ASCII character'), Comment('control-x -------------------------')),
+			Sequence('\\e', Comment('escape character (same as \\x1B)----------------------------')),
+			Sequence('\\f', Comment('form-feed character (same as \\x0C) ------------------------')),
+			Sequence('\\n', Comment('newline character (same as \\x0A) --------------------------')),
+			Sequence(
+				Comment('codepoint as octal'),
+				'\\o',
+				'{',
+				OneOrMore(NonTerminal('octal digit')),
+				'}'
+			),
+			Sequence('\\r', Comment('return character (same as \\x0D) ---------------------------')),
+			Sequence('\\t', Comment('tab character (same as \\x09) ------------------------------')),
+			Sequence(
+				Comment('codepoint as hexadecimal'),
+				'\\x',
+				Choice(0,
+					Sequence(
+						NonTerminal('hexadecimal digit'),
+						Optional(NonTerminal('hexadecimal digit'))
+					),
+					Sequence(
+						'{',
+						OneOrMore(NonTerminal('hexadecimal digit')),
+						'}'
+					)
+				)
+			),
+			Sequence(
+				Comment('codepoint as octal (see warning)'),
+				Terminal('\\'),
+				NonTerminal('octal digit'),
+				Optional(NonTerminal('octal digit')),
+				Optional(NonTerminal('octal digit'))
+			)
+		)
+		).addTo();
+		</script></p>
+
+
+		<div class="alert alert-info">
+			<strong>Notes on <code>\b</code>:</strong> Within a character class, <code>\b</code> will match a backspace
+			character. Within a branch, it asserts a word boundary. See
+			<a href="#escape-assertion">escape sequence: assertion</a>.
+		</div>
+		
+		<div class="alert alert-info">
+			<strong>Notes on <code>\o{...}</code>:</strong> The valid octal number range is 0-377 in ASCII mode and
+			0-4177777 in Unicode mode (it must also be a valid Unicode codepoint)
+		</div>
+		
+		<div class="alert alert-info">
+			<strong>Notes on <code>\x{...}</code>:</strong> The valid hexadecimal number range is 0-FF in ASCII mode and
+			0-10FFFFF in Unicode mode (it must also be a valid Unicode codepoint).
+		</div>
+
+		<div class="alert alert-warning">
+			<strong>Warning:</strong> It is highly recommended that you do not use a backslash followed by digits
+			as it may be treated as an <a href="#escape-character">octal codepoint</a>, an
+			<a href="#escape-backreference">escaped backreference</a>, or a literal number depending on the number and
+			other conditions. Use <code>\g</code> for backreferences. Use <code>\o</code> for octal codepoints.
+		</div>
+		
+		<h5 id="escape-type">escape sequence: character type</h5>
+
+		<p>
+			A character type escape sequence may appear within a <a href="#branch">branch</a>. All but
+			<code>\C\N\R\X</code> may appear within a <a href="#character-class">character class</a>. Match a single
+			character that falls within the character type. A <a href="#quantifier">quantifier</a> may
+			come after a character type escape sequence to modify how many it must match.
+		</p>
+
+		<p><script>
+		Diagram(
+			Choice(0,
+				Sequence('\\C', Comment('match a single data unit ----------------------------------')),
+				Sequence('\\d', Comment('any decimal digit -----------------------------------------')),
+				Sequence('\\D', Comment('any character that is not a decimal digit -----------------')),
+				Sequence('\\h', Comment('any horizontal whitespace character -----------------------')),
+				Sequence('\\H', Comment('any character that is not a horizontal whitespace character')),
+				Sequence('\\N', Comment('any character except start of newline sequence ------------')),
+				Sequence(
+					Comment('Unicode character property support'),
+					Choice(0,
+						Sequence('\\p', Comment('with property --')),
+						Sequence('\\P', Comment('without property'))
+					),
+					'{',
+					Choice(0,
+						NonTerminal('Unicode property', {href: '#unicode-properties'}),
+						NonTerminal('Unicode script', {href: '#unicode-scripts'})
+					),
+					'}'
+				),
+				Sequence('\\R', Comment('any newline sequence (CR, LF, CRLF) -----------------------')),
+				Sequence('\\s', Comment('any whitespace character ----------------------------------')),
+				Sequence('\\S', Comment('any character that is not a whitespace character ----------')),
+				Sequence('\\v', Comment('any vertical whitespace character -------------------------')),
+				Sequence('\\V', Comment('any character that is not a vertical whitespace character -')),
+				Sequence('\\w', Comment('any "word" character --------------------------------------')),
+				Sequence('\\W', Comment('any "non-word" character ----------------------------------')),
+				Sequence(
+					'\\X',
+					Comment('Unicode mode only: any extended Unicode grapheme cluster --')
+				)
+			)
+		).addTo();
+		</script></p>
+
+		<div class="alert alert-info">
+			<strong>Unicode note:</strong> In Unicode mode, the behavior of most of these escape sequences extend
+			to include Unicode characters as well.
+		</div>
+
+		<h6 id="unicode-properties">Properties for <code>\p{...}</code> and <code>\P{...}</code></h6>
+		
+		<p>
+			Match a character that either does (<code>\p</code>) or doesn't (<code>\P</code>) have the underlying
+			property. 
+		</p>
+
+		<p><script>
+		Diagram(
+			Comment('{'),
+			Choice(0,
+				Sequence('Any'),
+				Sequence('C', Comment('other'), Choice(0,
+					Skip(),
+					Sequence('c', Comment('control')),
+					Sequence('f', Comment('format')),
+					Sequence('n', Comment('unassigned')),
+					Sequence('o', Comment('private use')),
+					Sequence('o', Comment('surrogate'))
+				)),
+				Sequence('L', Comment('letter'), Choice(0,
+					Skip(),
+					Sequence('l', Comment('lowercase')),
+					Sequence('m', Comment('modifier')),
+					Sequence('o', Comment('other')),
+					Sequence('t', Comment('title')),
+					Sequence('u', Comment('uppercase')),
+					Sequence('&', Comment('everything but other'))
+				)),
+				Sequence('M', Comment('mark'), Choice(0,
+					Skip(),
+					Sequence('c', Comment('spacing')),
+					Sequence('e', Comment('enclosing')),
+					Sequence('n', Comment('non-spacing'))
+				)),
+				Sequence('N', Comment('number'), Choice(0,
+					Skip(),
+					Sequence('d', Comment('decimal')),
+					Sequence('l', Comment('letter')),
+					Sequence('o', Comment('other'))
+				)),
+				Sequence('P', Comment('punctuation'), Choice(0,
+					Skip(),
+					Sequence('c', Comment('connector')),
+					Sequence('d', Comment('dash')),
+					Sequence('e', Comment('end')),
+					Sequence('f', Comment('final')),
+					Sequence('i', Comment('initial')),
+					Sequence('o', Comment('other')),
+					Sequence('s', Comment('start'))
+				)),
+				Sequence('S', Comment('symbol'), Choice(0,
+					Skip(),
+					Sequence('c', Comment('currency')),
+					Sequence('k', Comment('modifier')),
+					Sequence('m', Comment('mathematical')),
+					Sequence('o', Comment('other'))
+				)),
+				Sequence('Z', Comment('separator'), Choice(0,
+					Skip(),
+					Sequence('l', Comment('line')),
+					Sequence('p', Comment('paragraph')),
+					Sequence('s', Comment('space'))
+				)),
+				Sequence('X', Comment('PCRE extended'), Choice(0,
+					Sequence('an', Comment('alphanumeric')),
+					Sequence('ps', Comment('POSIX space')),
+					Sequence('sp', Comment('Perl space')),
+					Sequence('wd', Comment('Perl word')),
+					Sequence('uc', Comment('Universal codepoint'))
+				))
+			),
+			Comment('}')
+		).addTo();
+		</script></p>
+
+		<h6 id="unicode-scripts">Scripts for <code>\p{...}</code> and <code>\P{...}</code></h6>
+
+		<p>
+			Match a character that does (<code>\p</code>) or doesn't (<code>\P</code>) belong to the character script:
+		</p>
+
+		<p>
+			Arabic, Armenian, Avestan, Balinese, Bamum, Bassa_Vah, Batak, Bengali, Bopomofo, Brahmi, Braille, Buginese,
+			Buhid, Canadian_Aboriginal, Carian, Caucasian_Albanian, Chakma, Cham, Cherokee, Common, Coptic, Cuneiform,
+			Cypriot, Cyrillic, Deseret, Devanagari, Duployan, Egyptian_Hieroglyphs, Elbasan, Ethiopic, Georgian,
+			Glagolitic, Gothic, Grantha, Greek, Gujarati, Gurmukhi, Han, Hangul, Hanunoo, Hebrew, Hiragana,
+			Imperial_Aramaic, Inherited, Inscriptional_Pahlavi, Inscriptional_Parthian, Javanese, Kaithi, Kannada,
+			Katakana, Kayah_Li, Kharoshthi, Khmer, Khojki, Khudawadi, Lao, Latin, Lepcha, Limbu, Linear_A, Linear_B,
+			Lisu, Lycian, Lydian, Mahajani, Malayalam, Mandaic, Manichaean, Meetei_Mayek, Mende_Kikakui,
+			Meroitic_Cursive, Meroitic_Hieroglyphs, Miao, Modi, Mongolian, Mro, Myanmar, Nabataean, New_Tai_Lue, Nko,
+			Ogham, Ol_Chiki, Old_Italic, Old_North_Arabian, Old_Permic, Old_Persian, Old_South_Arabian, Old_Turkic,
+			Oriya, Osmanya, Pahawh_Hmong, Palmyrene, Pau_Cin_Hau, Phags_Pa, Phoenician, Psalter_Pahlavi, Rejang,
+			Runic, Samaritan, Saurashtra, Sharada, Shavian, Siddham, Sinhala, Sora_Sompeng, Sundanese, Syloti_Nagri,
+			Syriac, Tagalog, Tagbanwa, Tai_Le, Tai_Tham, Tai_Viet, Takri, Tamil, Telugu, Thaana, Thai, Tibetan,
+			Tifinagh, Tirhuta, Ugaritic, Vai, Warang_Citi, Yi
+		</p>
+		
+		<h5 id="escape-backreference">escape sequence: backreference</h5>
+
+		<p>
+			A backreference matches an existing subresult of the most recent subpattern with the given name or offset. A
+			<a href="#quantifier">quantifier</a> may come after an escaped backreference to modify how many it must
+			match.
+		</p>
+
+		<p><script>
+		Diagram(
+			Choice(0,
+				Sequence(
+					Choice(0,
+						Sequence(
+							'\\k',
+							Choice(0,
+								Sequence(Comment('Perl syntax'), '<', NonTerminal('name'), '>'),
+								Sequence(Comment('Perl syntax'), '\'', NonTerminal('name'), '\''),
+								Sequence(Comment('.NET syntax'), '{', NonTerminal('name'), '}')
+							)
+						),
+						Sequence(
+							'\\g',
+							Choice(0,
+								Sequence(
+									Comment('absolute'), 
+									NonTerminal('integer between 1 and 99')
+								),
+								Sequence(
+									'{',
+									Choice(0,
+										Sequence(
+											Comment('named'),
+											NonTerminal('name')
+										),
+										Sequence(
+											Choice(0,
+												Comment('absolute'),
+												Sequence(Comment('relative'), '-')
+											),
+											NonTerminal('integer')
+										)
+									),
+									'}'
+								)
+							)
+						),
+						Sequence(
+							Comment('absolute (see warning)'),
+							Terminal('\\'),
+							NonTerminal('integer between 1 and 99')
+						)
+					)
+				)
+			)
+		).addTo()
+		</script></p>
+		
+		<div class="alert alert-warning">
+			<strong>Warning:</strong> It is highly recommended that you do not use a backslash followed by digits
+			as it may be treated as an <a href="#escape-character">octal codepoint</a>, an
+			<a href="#escape-backreference">escaped backreference</a>, or a literal number depending on the number and
+			other conditions. Use <code>\g</code> for backreferences. Use <code>\o</code> for octal codepoints.
+		</div>
+		
+		<h5 id="escape-subroutine">escape sequence: subroutine call</h5>
+
+		<p>
+			A subroutine call matches an existing subpattern with the given name or offset at the current position. A
+			<a href="#quanitifer">quantifier</a> may come after a subroutine call to modify how many it must match.
+		</p>
+
+		<p><script>
+		Diagram(
+			Terminal('\\g'),
+			Choice(0,
+				Sequence(
+					'<',
+					Choice(0,
+						Sequence(
+							Comment('named'),
+							NonTerminal('name')
+						),
+						Sequence(
+							Choice(0,
+								Comment('absolute'),
+								Sequence(Comment('relative'), '+'),
+								Sequence(Comment('relative'), '-')
+							),
+							NonTerminal('integer')
+						)
+					),
+					'>'
+				),
+				Sequence(
+					"'",
+					Choice(0,
+						Sequence(
+							Comment('named'),
+							NonTerminal('name')
+						),
+						Sequence(
+							Choice(0,
+								Comment('absolute'),
+								Sequence(Comment('relative'), '+'),
+								Sequence(Comment('relative'), '-')
+							),
+							NonTerminal('integer')
+						)
+					),
+					"'"
+				)
+			)
+		).addTo();
+		</script></p>
+		
+		<h5 id="escape-reset">escape sequence: reset match start</h5>
+
+		<p>
+			Any previously matched characters will not be included in the result of the regular expression (e.g.
+			<code>foo\Kbar</code> will match foobar but ony return bar as the result of the match). Any
+			subpatterns that come before this sequence will still be captured as subresults/backreferences; that is,
+			this escape sequence only affects the main result and not subresults. A <a href="#quantifier">quantifier</a>
+			CANNOT come after this escape sequence.
+		</p>
+
+		<p><script>
+		Diagram(
+			Terminal('\\K')
+		).addTo();
+		</script></p>
+		
+		<p>
+			This escape sequence is ignored within a negative assertion but works within a positive assertion. Normally,
+			assertions are not included in the final result. 
+			<code>(?&lt;=fo\Ko)bar</code> will return <var>obar</var> as the result when matching against
+			<var>foobar</var> instead of just <var>bar</var>. <code>((?&lt;=fo\Ko)bar)</code> will return <var>bar</var>
+			as the first subresult and <var>obar</var> as the result when matching against <var>foobar</var>.
+		</p>
+
+		<h5 id="escape-quote">escape sequence: character quoting</h5>
+
+		<p>
+			Character quoting lets you turn metacharacters into literal characters to be matched. A
+			<a href="#quantifier">quantifier</a> may come after these escape sequences, but a quantifier
+			after a <code>\Q \E</code> sequence does not entirely work.
+		</p>
+
+		<p><script>
+		Diagram(
+			Choice(0,
+				Sequence(
+					Comment('quote single character'),
+					Terminal('\\'),
+					NonTerminal('any non ASCII-alphanumeric')
+				),
+				Sequence(Comment('quote multiple characters'), '\\Q', NonTerminal('anything but \\E'), '\\E'),
+				Sequence(Comment('ignored'), '\\E')
+			)
+		).addTo();
+		</script></p>
+
+		<div class="alert alert-info">
+			<strong>Notes on <code>\Q</code> and <code>\E</code>:</strong> All characters between these two escape
+			sequences will be treated as <a href="#character">literal</a> characters. If the regular expression ends
+			before <code>\E</code>, a <code>\E</code> will be implied. If <code>\E</code> occurs before <code>\Q</code>
+			within the regular expression, it will be ignored.
+		</div>
+
+		<h5 id="escape-unsupported">unsupported escape sequence</h5>
+
+		<p>
+			The regular expression engine will fail when these escape sequences are encountered.
+		</p>
+
+		<p><script>
+		Diagram(
+			Choice(0,
+				Sequence('\\L'),
+				Sequence('\\l'),
+				Sequence('\\U'),
+				Sequence('\\u')
+			)
+		).addTo();
+		</script></p>
+
+		<p>
+			If the PCRE_JAVASCRIPT_COMPAT option is set, <code>\U</code> will be treated like an
+			<a href="#escape-unrecognized">unrecognized escape sequence</a> and <code>\u</code> takes on the syntax
+			below. If it does not follow the below syntax, <code>\u</code> is also treated like an 
+			<a href="#escape-unrecognized">unrecognized escape sequence</a>.
+		</p>
+
+		<p><script>
+		Diagram(
+			Terminal('\\u'),
+			NonTerminal('four hexadecimal digits')
+		).addTo();
+		</script></p>
+
+		<h5 id="escape-unrecognized">unrecognized escape sequence</h5>
+
+		<p>
+				The following escape sequences match the literal characters being escaped, that is, they are not special
+				escape sequences within PCRE. However, it is strongly discouraged to use these escape sequences as
+				future versions of PCRE may change this behavior. To write regular expressions that cause the engine
+				to fail when these escape sequences are used, set <a href="#PCRE_EXTRA">PCRE_EXTRA</a> mode.
+		</p>
+
+		<p><script>
+		Diagram(
+			Choice(5,
+				Sequence('\\F'),
+				Sequence('\\I'),
+				Sequence('\\i'),
+				Sequence('\\J'),
+				Sequence('\\j'),
+				Sequence('\\M'),
+				Sequence('\\m'),
+				Sequence('\\O'),
+				Sequence('\\q'),
+				Sequence('\\T'),
+				Sequence('\\Y'),
+				Sequence('\\y')
+			)
+		).addTo();
+		</script></p>
+
+		<h4 id="quantifier">quantifier</h5>
+		
+		<p>
+			A quantifier allows for the repetition of what comes before it. A quantifier may come after a
+			<a href="#character">literal character</a>,
+			an <a href="#escape-sequence">escape sequence</a>,
+			a <a href="#subexpression">subexpression</a>,
+			a <a href="#character-class">character class</a>,
+			or the <a href="#wildcard">dot wildcard</a>.
+		</p>
+
+		<p><script>
+		Diagram(
+			Choice(0,
+				Sequence(
+					'{',
+					NonTerminal('digits'),
+					Choice(0,
+						Comment('exactly n times'),
+						Sequence(',',
+							Choice(0,
+								Comment('at least n times'),
+								Sequence(
+								NonTerminal('digits'),
+									Comment('between n and m times')
+								)
+							)
+						)
+					),
+					'}'
+				),
+				Sequence('*', Comment('same as {0,} ')),
+				Sequence('+', Comment('same as {1,} ')),
+				Sequence('?', Comment('same as {0,1}'))
+			),
+			Comment('greediness'),
+			Choice(0,
+				Comment('greedy'),
+				Sequence('?', Comment('lazy')),
+				Sequence('+', Comment('possessive'))
+			)
+		).addTo()
+		</script></p>
+		
+		<div class="alert alert-warning">
+			<strong>Warning:</strong> If a braced quantifier is ill-formed, then the initial brace will be matched as
+			a literal character instead, and the regular expression engine will continue after that character (e.g.
+			<code>{1,5.0}</code> would be matched as literal characters instead of treated as a quantifier).
+			This behavior is different from other regular expression constructs, which cause the engine to fail if they
+			are ill-formed.
+		</div>
+		
+		<div class="alert alert-primary">
+			<ul>
+				<li>optimizing speed of regex engine with greediness:
+					<ul>
+						<li>maximal (greedy) means attempt to match maximum quantity first, then backtrack if necessary</li>
+						<li>minimal (lazy) means attempt to match minimum quantity first, then advance if necessary</li>
+						<li>
+							possessive means match maximum quantity possible and don't backtrack, even if the match
+							fails
+						</li>
+					</ul>
+				</li>
+				<li>the first set of digits n must be 0 ≤ n ≤ 65535</li>
+				<li>the second set of digits m must be n ≤ m ≤ 65535</li>
+				<li>
+					<code>{0}</code> is a valid quantifier. It behaves as if the previous item was not present. It
+					is useful for defining subroutines.
+				</li>
+			</ul>
+		</div>
+	
+		<h4 id="start-anchor">start anchor <code>^</code></h4>
+		
+		<p><script>
+		Diagram(
+			'^'
+		).addTo()
+		</script></p>
+		
+		<p>
+			The caret metacharacter is a zero-width assertion that asserts the match is happening at the start
+			of the subject. In <a href="#PCRE_MULTILINE">multiline</a> mode, it asserts the match is happening at the
+			start of the subject or after a <a href="#newline-sequence">newline sequence</a> (i.e. the start of a line). 
+		</p>
+		
+		<!--<p>
+			<code>^</code> could be written more verbosely using assertion syntax <code>(?&lt;!(?s).)</code> (or
+			<code>(?&lt;!(?-s).)</code> in multiline mode).
+		</p>-->
+
+		<h4 id="end-anchor">end anchor <code>$</code></h4>
+		
+		<p><script>
+		Diagram(
+			'$'
+		).addTo()
+		</script></p>
+		
+		<p>
+			The dollar sign matacharacter is a zero-width assertion that asserts the match is happening at the
+			end of the subject or before a <a href="#newline-sequence">newline sequence</a> at the end of the subject.
+			In <a href="#PCRE_MULTILINE">multiline mode</a>, it asserts the match is happening at the end of the subject
+			or before a <a href="newline-sequence">newline sequence</a> (i.e. the end of a line).
+		</p>
+		
+		<!--<p>
+			<code>$</code> could be written more verbosely using assertion syntax <code>(?=(?:(?s).)?(?!(?s).))</code>
+			(or <code>(?=(?s).|(?!(?s).))</code> in multiline mode).
+		</p>-->
+		
+		<h4 id="subexpression">subexpression</h5>
+
+		<p>
+			A subexpression may appear within a <a href="#branch">branch</a>. A <a href="#quantifier">quantifier</a> may
+			appear after the closing parenthesis of the subexpression to repeat it, unless the subexpression is a
+			comment or backtracking control.
+		</p>
+		
+		<p><script>
+		ComplexDiagram(
+			Terminal('('),
+			Choice(0,
+			  	Sequence(
+					Comment('capture by sequence'),
+					NonTerminal('pattern', {href: "#pattern"})
+				),
+				Sequence('?',
+					Choice(0,
+						Sequence(
+							Comment('capture by name'),
+							Choice(0,
+								Sequence(
+									Choice(0,
+										Comment('perl-style'),
+										Sequence(Comment('python-style'), 'P')
+									),
+									'<',
+									NonTerminal('name'),
+									'>'
+								),
+								Sequence(
+									Comment('perl-style'),
+									'\'',
+									NonTerminal('name'),
+									'\''
+								)
+							),
+							NonTerminal('pattern', {href: '#pattern'})
+						),
+						Sequence(
+							Comment('non-captured'),
+							Choice(0,
+								Sequence(
+									OptionalSequence(
+										Sequence(
+											Comment('set options'),
+											NonTerminal('options', {href: '#internal-option'})
+										),
+										Sequence(
+											":",
+											NonTerminal('pattern', {href: '#pattern'})
+										)
+									)
+								),
+								Sequence(
+									Comment('assert before/after'),
+									NonTerminal('assertion', {href: '#assertion'})
+								),
+								Sequence(
+									Comment('conditional branching'),
+									NonTerminal('condition', {href: '#condition'}),
+									NonTerminal('yes-branch', {href: '#branch'}),
+									Optional(
+										Sequence(
+											'|',
+											NonTerminal('no-branch', {href: '#branch'})
+										)
+									)
+								),
+								Sequence(
+									Comment('atomic matching (once-only for optimization)'),
+									'>',
+									NonTerminal('pattern', {href: '#pattern'})
+								),
+								Sequence(
+									Comment('subroutine call'),
+									Choice(0,
+										Sequence(
+											Comment('by position'),
+											Choice(0,
+												Comment('absolute'),
+												Sequence(Comment('relative'), '-'),
+												Sequence(Comment('relative'), '+')
+											),
+											NonTerminal('integer between 0 and 99')
+										),
+										Sequence(
+											Comment('by name'),
+											Choice(0,
+												Sequence(
+													'&',
+													NonTerminal('name')
+												),
+												Sequence(
+													Comment('(python)'),
+													'P>',
+													NonTerminal('name')
+												)
+											)
+										),
+										Sequence(
+											Comment('entire regex (same as 0)'),
+											'R'
+										)
+									)
+								),
+								Sequence(
+									Comment('back reference by name'),
+									'P=',
+									NonTerminal('name')
+								),
+								Sequence(
+									Comment('branch reset'),
+									'|',
+									NonTerminal('pattern', {href: '#pattern'})
+								),
+								Sequence(
+									Comment('inline comment'),
+									'#',
+									NonTerminal('anything but closing parenthesis')
+								)
+							)
+						)
+				  	)
+				),
+			  	Sequence(
+					Comment('non-captured, backtracking control'),
+					'*',
+					NonTerminal('control verb', {href: '#control-verb'})
+				)
+			),
+			Terminal(')')
+		).addTo()
+		</script></p>
+
+		<h5 id="assertion">subexpression: assertion</h5>
+
+		<p>
+			The following syntax is used within a <a href="#subexpression">subexpression</a> and within a
+			<a href="#condition">conditional branching subexpression</a>.
+		</p>
+
+		<p><script>
+		Diagram(
+			Sequence(
+				Choice(0,
+					Comment('lookahead'),
+					Sequence(
+						'<',
+						Comment('lookbehind')
+					)
+				),
+				Choice(0,
+					Sequence(
+						Comment('positive'),
+						'='
+					),
+					Sequence(
+						Comment('negative'),
+						'!'
+					)
+				),
+				NonTerminal('pattern', {href: '#pattern'})
+			)
+		).addTo();
+		</script></p>
+
+		<h5 id="condition">subexpression: condition</h5>
+
+		<p>
+			The following syntax is the conditional part of a conditional branching
+			<a href="#subexpression">subexpression</a>.
+		</p>
+
+		<p><script>
+		Diagram(
+			Terminal('('),
+			Choice(0,
+				Sequence(
+					Comment('back reference is set'),
+					Choice(0,
+						Sequence(
+							Choice(0,
+								Comment('absolute'),
+								Sequence(Comment('relative'), '-'),
+								Sequence(Comment('relative'), '+'),
+							),
+							NonTerminal('integer between 1 and 99'),
+						),
+						Sequence(
+							Comment('named'),
+							Choice(0,
+								Sequence(Comment('perl'), '<', NonTerminal('name'), '>'),
+								Sequence(Comment('perl'), '\'', NonTerminal('name'), '\''),
+								Sequence(Comment('pcre'), NonTerminal('name'))
+							)
+						)
+					)
+				),
+				Sequence(
+					Comment('define subroutine'),
+					Terminal('DEFINE'),
+				),
+				Sequence(
+					Comment('recursion'),
+					Terminal('R'),
+					Choice(0,
+						Skip(),
+						NonTerminal('integer between 1 and 99'),
+						Sequence('&', NonTerminal('name'))
+					)
+				),
+				Sequence(
+					Comment('assert before/after'),
+					'?',
+					NonTerminal('assertion', {href: '#assertion'})
+				)
+			),
+			Terminal(')')
+		).addTo()
+		</script></p>
+
+		<div class="alert alert-warning">
+			If condition is DEFINE, the no-branch is not allowed and the condition is always treated as false.
+		</div>
+
+		<div class="alert alert-warning">
+			If there's a named capture with the name DEFINE, R, R1, R2, etc, then those override the default
+			behavior of those identifiers.
+		</div>
+		
+		<h5 id="internal-option">subexpression: internal option setting</h5>
+		
+		<p>
+			Change the options of the <a href="#pattern">pattern</a> following it (e.g. <code>(?i)</code>
+			would change to case-insensitive for the rest of pattern containing this construct, <code>(?i:ABC)</code>
+			would change to case-insensitive for the ABC pattern within the subexpression)
+		</p>
+		
+		<p><script>
+		ComplexDiagram(
+			Choice(0,
+				OptionalSequence(
+					Sequence(
+						Comment('set'),
+						OneOrMore(
+							Sequence(
+								Choice(0,
+									NonTerminal('option', {href: '#option'})
+								)
+							),
+							Comment('set another option')
+						)
+					),
+					Sequence(
+						Comment('unset'),
+						'-',
+						OneOrMore(
+							Sequence(
+								Choice(0,
+									NonTerminal('option', {href: '#option'}),
+								  	Sequence('-', Comment('extra dashes are ignored'))
+								),
+							),
+							Comment('unset another option')
+						)
+					)
+				)
+			)
+		).addTo()
+		</script></p>
+		
+		<h6 id="option">options</h6>
+		
+		<p><script>
+		Diagram(
+			Choice(0,
+				Sequence('i', Comment('PCRE_CASELESS', {href: "#PCRE_CASELESS"})),
+				Sequence('m', Comment('PCRE_MULTILINE', {href: "#PCRE_MULTILINE"})),
+				Sequence('s', Comment('PCRE_DOTALL', {href: "#PCRE_DOTALL"})),
+				Sequence('J', Comment('PCRE_DUPNAMES', {href: "#PCRE_DUPNAMES"})),
+				Sequence('U', Comment('PCRE_UNGREEDY', {href: "#PCRE_UNGREEDY"})),
+				Sequence('x', Comment('PCRE_EXTENDED', {href: "#PCRE_EXTENDED"})),
+				Sequence('X', Comment('PCRE_EXTRA', {href: "#PCRE_EXTRA"})),
+			)
+		).addTo()
+		</script></p>
+
+		<dl>
+			<dt id="PCRE_CASELESS">i (PCRE_CASELESS)</dt>
+			<dd>Any alphabetic character within the pattern will match either lowercase or uppercase.</dd>
+
+			<dt id="PCRE_MULTILINE">m (PCRE_MULTILINE)</dt>
+			<dd>
+				Extend the <a href="#start-anchor"><code>^</code></a> and <a href="#end-anchor"><code>$</code></a>
+				metacharacters to also match after and before any <a href="#newline-sequence">newline sequence</a>,
+				respectively.
+			</dd>
+
+			<dt id="PCRE_DOTALL">s (PCRE_DOTALL)</dt>
+			<dd>
+				Extend the <a href="#wildcard"><code>.</code> metacharacter</a> to also match characters that form a 
+				valid <a href="#newline-sequence">newline sequence</a>.
+			</dd>
+
+			<dt id="PCRE_EXTENDED">x (PCRE_EXTENDED)</dt>
+			<dd>
+				Any literal space character in the pattern will be ignored. Any unescaped <code>#</code> will be treated
+				as the start of an inline comment that is terminated by a <a href="#newline-sequence">newline
+				sequence</a>. Comment <a href="#subexpression">subexpressions</a> would no longer be valid because of
+				this.
+			</dd>
+
+			<dt id="PCRE_DUPNAMES">J (PCRE_DUPNAMES)</dt>
+			<dd>
+				(Not Perl compatible) By default, names must be unique within the regular expression.
+				This relaxes that rule.
+			</dd>
+
+			<dt id="PCRE_UNGREEDY">U (PCRE_UNGREEDY)</dt>
+			<dd>
+				(Not Perl compatible) Converts <a href="#quanitifer">quantifiers</a> from having maximal greediness to
+				having minimal greediness (lazy) by default. Also, changes meaning of <code>?</code> from enabling
+				minimal greediness to enabling maximal greediness.
+			</dd>
+
+			<dt id="PCRE_EXTRA">X (PCRE_EXTRA)</dt>
+			<dd>
+				(Not Perl compatible) Causes regular expression engine to fail if it encounters any
+				<a href="#escape-unrecognized">undefined escape sequence</a>.
+			</dd>
+
+		</dl>
+
+		<h4 id="control-verb">control verb</h4>
+		
+		<p>
+			Control verbs don't match any characters. They allow controlling the engine to achieve hints, optimizations,
+			and jumps.
+			<a href="http://www.rexegg.com/pcre-doc/08.37/pcrepattern.html#SEC27">
+				PCRE documentation on control verbs
+			</a>
+		</p>
+
+		<p><script>
+		Diagram(
+			Comment('(*'),
+			Choice(0,
+				Sequence(
+					Choice(0, 
+						Sequence('THEN'),
+						Sequence('PRUNE'),
+						Sequence('SKIP'),
+					),
+					Optional(
+						Sequence(
+							':',
+							NonTerminal('name')
+						),
+						'skip'
+					)
+				),
+				Sequence(
+					'COMMIT'
+				),
+				Sequence(
+					'ACCEPT'
+				),
+				Sequence(
+					'F',
+					Optional('AIL')
+				),
+				Sequence(
+					Optional('MARK'),
+					':',
+					NonTerminal('name')
+				)
+			),
+			Comment(')')
+		).addTo();
+		</script></p>
+
+		<dl>
+			<dt>THEN</dt>
+			<dd>
+				Autopossessification. Give up matching the current <a href="#branch">branch</a> within an alternation,
+				try the next <a href="#branch">branch</a>. If the current pattern only consists of one branch (that is,
+				it is not an alternation), then it goes to the next branch of the outer pattern if the current pattern
+				is within another pattern.
+			</dd>
+
+			<dt>ACCEPT</dt>
+			<dd>
+				This verb acts immediately. This verb causes the pattern to match successfully, skipping the remainder
+				of the pattern. Within a subroutine, it causes only the subroutine to end successfully. Within a
+				positive assertion, only the assertion ends successfully. Within a negative assertion, the assertion
+				fails.
+			</dd>
+
+			<dt>F and FAIL</dt>
+			<dd>
+				This verb acts immediately. If the engine reaches this control verb within a branch, it immediately
+				fails and begins to backtrack. It is the same as <code>(?!)</code>.
+			</dd>
+		</dl>
+
+		<h4 id="start-of-pattern-options">special options</h4>
+
+		<p>
+			These special options must appear right at the start of the <a href="#regular-expression">regular
+			expression</a>. They are not Perl-compatible. These options are available to pattern writers who are not
+			able to change the program that processes the patterns.
+		</p>
+
+		<p><script>
+		Diagram(
+			OneOrMore(
+				Sequence(
+					'(*',
+					Choice(0,
+						Sequence(
+							Comment('newline sequence'),
+							Choice(0,
+								Sequence('CR'),
+								Sequence('LF'),
+								Sequence('CRLF'),
+								Sequence('ANYCRLF'),
+								Sequence('ANY')
+							)
+						),
+						Sequence(
+							Comment('UTF support'),
+							Choice(0,
+								Sequence('UTF8'),
+								Sequence('UTF16'),
+								Sequence('UTF32'),
+								Sequence('UTF')
+							)
+						),
+						Sequence(
+							Comment('change behavior of \\R'),
+							Choice(0,
+								Sequence('BSR_UNICODE'),
+								Sequence('BSR_ANYCRLF')
+							)
+						),
+						Sequence(Comment('Unicode property support'), 'UCP'),
+						Sequence(Comment('no auto-possessification'), 'NO_AUTO_POSSESS'),
+						Sequence(Comment('no start optimization'), 'NO_START_OPT'),
+						Sequence(
+							Comment('set match limit'),
+							'LIMIT_MATCH',
+							'=',
+							OneOrMore(
+								NonTerminal('decimal digit')
+							)
+						),
+						Sequence(
+							Comment('set recursion limit'),
+							'LIMIT_RECURSION',
+							'=',
+							OneOrMore(
+								NonTerminal('decimal digit')
+							)
+						)
+					),
+					')'
+				)
+			)
+		).addTo();
+		</script></p>
+
+		<h4 id="newline-sequence">newline sequence</h4>
+
+		<p>
+			By default, the engine uses a newline sequence of one or more characters (e.g.
+			<code>\n</code> on Unix-like systems, <code>\r\n</code> on Windows). The newline sequence may be explicitly
+			controlled using <a href="#start-of-pattern-options">special options</a>.
+		</p>
+	</section>
+
+	<script>
+	document.querySelectorAll('h1,h2,h3,h4,h5,h6,dt').forEach(function (e) {
+		if (e.id) {
+			e.style.position = 'relative';
+			e.style.left = '-20px';
+			e.style.paddingLeft = '20px';
+			let anchor = document.createElement('A');
+			anchor.href = '#' + e.id;
+			anchor.style.position = 'absolute';
+			anchor.style.left = '0px';
+			anchor.style.top = '0px';
+			anchor.style.display = 'none';
+			anchor.innerHTML = '<i class="fa fas fa-link fa-xs" style="font-size:10pt;"></i>';
+			e.appendChild(anchor);
+			e.addEventListener('mouseenter', function (e) {
+				this.lastChild.style.display = '';
+			});
+			e.addEventListener('mouseleave', function (e) {
+				this.lastChild.style.display = 'none';
+			});
+		}
+	});
+	</script>
+</body>
+</html>
