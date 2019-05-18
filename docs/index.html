@@ -246,7 +246,7 @@
 			Terminal('['),
 			Choice(0,
 				Sequence(
-					 Optional(Sequence('^', Comment('negate'))),
+					 Optional(Sequence('^', Comment('negate')), "skip"),
 					 OneOrMore(
 						 Choice(0,
 						 	Sequence(
@@ -284,7 +284,8 @@
 		Start('simple', 'test'),
 		'[:',
 		Optional(
-			Sequence('^', Comment('negate'))
+			Sequence('^', Comment('negate')),
+            "skip"
 		),
 		Choice(0,
 			Terminal('alnum', {href: '#posix-alnum'}),
@@ -357,7 +358,8 @@
 		<p>
 			An escape sequence may appear within a <a href="#branch">branch</a>. Additionally, they may appear within a
 			<a href="#character-class">character class</a> depending on the escape sequence. A 
-			<a href="#quantifier">quantifier</a> may come after it depending on the escape sequence.
+			<a href="#quantifier">quantifier</a> may come after an escape sequence appearing in a branch depending on the
+            escape sequence.
 		</p>
 		
 		<p class="table-responsive"><script>
