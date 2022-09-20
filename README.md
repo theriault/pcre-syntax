@@ -16,20 +16,20 @@ ___This repo was an experiment &mdash; some of the diagrams get pretty gnarly.__
 
 ### Expression
 
-[![Pattern](https://user-images.githubusercontent.com/150607/191187098-cc5dcbba-8e5e-47c8-bc82-d30e9f5b65d0.svg)](#)
+[![Pattern](https://user-images.githubusercontent.com/150607/191187098-cc5dcbba-8e5e-47c8-bc82-d30e9f5b65d0.svg)](https://theriault.github.io/pcre-syntax/#regular-expression)
 
 ### Pattern
 
-[![Pattern](https://user-images.githubusercontent.com/150607/191188199-b340c8fd-07e2-433c-8bab-d6be3f28f5bf.svg)](#)
+[![Pattern](https://user-images.githubusercontent.com/150607/191188199-b340c8fd-07e2-433c-8bab-d6be3f28f5bf.svg)](https://theriault.github.io/pcre-syntax/#pattern)
 
 ### Branch
 
-[![branch](https://user-images.githubusercontent.com/150607/191189816-386ec1cd-44e2-4a33-966e-2142928d3b10.svg)](#)
+[![branch](https://user-images.githubusercontent.com/150607/191189816-386ec1cd-44e2-4a33-966e-2142928d3b10.svg)](https://theriault.github.io/pcre-syntax/#branch)
 
 ### Quantifier
 
-[![quantifier](https://user-images.githubusercontent.com/150607/191189909-6bf5bd6d-0d52-4bd1-bd4f-13df69ea7504.svg)](#)
+[![quantifier](https://user-images.githubusercontent.com/150607/191189909-6bf5bd6d-0d52-4bd1-bd4f-13df69ea7504.svg)](https://theriault.github.io/pcre-syntax/#quantifier)
 
 ### Character Class
 
-[![character-class](https://user-images.githubusercontent.com/150607/191189938-3879fee2-116d-4453-8f62-6c79cf6f23ff.svg)](#)
+[![character-class](https://user-images.githubusercontent.com/150607/191189938-3879fee2-116d-4453-8f62-6c79cf6f23ff.svg)](https://theriault.github.io/pcre-syntax/#character-class)
