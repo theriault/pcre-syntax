@@ -16,25 +16,20 @@ ___This repo was an experiment &mdash; some of the diagrams get pretty gnarly.__
 
 ### Expression
 
-![Expression](excerpt/expression.png?raw=true "Expression")
+[![Pattern](https://user-images.githubusercontent.com/150607/191187098-cc5dcbba-8e5e-47c8-bc82-d30e9f5b65d0.svg)](#)
 
 ### Pattern
 
-![Pattern](excerpt/pattern.png?raw=true "Pattern")
+[![Pattern](https://user-images.githubusercontent.com/150607/191188199-b340c8fd-07e2-433c-8bab-d6be3f28f5bf.svg)](#)
 
 ### Branch
 
-![Branch](excerpt/branch.png?raw=true "Branch")
+[![branch](https://user-images.githubusercontent.com/150607/191189816-386ec1cd-44e2-4a33-966e-2142928d3b10.svg)](#)
 
 ### Quantifier
 
-![Quantifier](excerpt/quantifier.png?raw=true "Quantifier")
+[![quantifier](https://user-images.githubusercontent.com/150607/191189909-6bf5bd6d-0d52-4bd1-bd4f-13df69ea7504.svg)](#)
 
 ### Character Class
 
-![Character Class](excerpt/character-class.png?raw=true "Character Class")
-
-### POSIX Character Class
-
-![POSIX Character Class](excerpt/posix-character-class.png?raw=true "POSIX Character Class")
-
+[![character-class](https://user-images.githubusercontent.com/150607/191189938-3879fee2-116d-4453-8f62-6c79cf6f23ff.svg)](#)
